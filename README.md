@@ -1,1 +1,1 @@
-﻿# StegaWAVE
+# StegaWAVE

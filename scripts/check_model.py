@@ -7,7 +7,11 @@ from stegawave.models.model import Model
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CHECKPOINT = ROOT / "model.pt"
+CHECKPOINT = (
+    ROOT / "checkpoints" / "model.pt"
+    if (ROOT / "checkpoints" / "model.pt").is_file()
+    else ROOT / "model.pt"
+)
 DEVICE = torch.device("cpu")
 
 
