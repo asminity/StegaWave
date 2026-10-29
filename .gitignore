@@ -52,7 +52,7 @@ logs/
 # Machine learning checkpoints and weights
 checkpoints/
 weights/
-models/
+/models/
 *.pt
 *.pth
 *.ckpt
@@ -61,6 +61,8 @@ models/
 # Generated datasets and images
 data/raw/
 data/processed/
+data/transformed/
+data/outputs/
 outputs/
 results/
 generated_images/

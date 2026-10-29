@@ -1,6 +1,7 @@
 import torch
 from torch import Tensor, nn
 
+
 class DWT(nn.Module):
     """Convert BCHW images into four wavelet subbands per channel."""
 
