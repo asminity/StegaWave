@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-import sys
 
 import numpy as np
 from PIL import Image
@@ -13,15 +12,26 @@ if str(SRC_DIR) not in sys.path:
 
 from stegawave.data.preprocessing import (
     DATA_DIR,
+    TRANSFORMED_DIR,
     load_and_preprocess_image,
 )
 
-# Reference images are taken from data/transformed to match the 256x256 output dimensions
-COVER_SAMPLE = DATA_DIR / "samples" / "cover" / "cover.jpeg"
-SECRET_SAMPLE = DATA_DIR / "samples" / "secret" / "secret.jpeg"
 
-COVER = DATA_DIR / "transformed" / "cover" / "cover.jpeg"
-SECRET = DATA_DIR / "transformed" / "secret" / "secret.jpeg"
+def get_image_path(folder: Path, stem: str, default_ext: str = ".jpg") -> Path:
+    """Find an image matching stem with common image extensions."""
+    for ext in (".jpg", ".jpeg", ".png"):
+        candidate = folder / f"{stem}{ext}"
+        if candidate.is_file():
+            return candidate
+    return folder / f"{stem}{default_ext}"
+
+
+# Reference images are taken from data/transformed to match the 256x256 output dimensions
+COVER1_SAMPLE = get_image_path(DATA_DIR / "samples" / "cover", "cover1", ".jpg")
+SECRET1_SAMPLE = get_image_path(DATA_DIR / "samples" / "secret", "secret1", ".jpeg")
+
+COVER1 = TRANSFORMED_DIR / "cover" / COVER1_SAMPLE.name
+SECRET1 = TRANSFORMED_DIR / "secret" / SECRET1_SAMPLE.name
 STEGO = DATA_DIR / "outputs" / "stego.jpeg"
 RECOVERED = DATA_DIR / "outputs" / "recovered_secret.jpeg"
 
@@ -80,11 +90,11 @@ def evaluate_pair(
 
 
 def main() -> None:
-    cover_ref = ensure_reference_image(COVER, COVER_SAMPLE, "cover")
-    secret_ref = ensure_reference_image(SECRET, SECRET_SAMPLE, "secret")
+    cover1_ref = ensure_reference_image(COVER1, COVER1_SAMPLE, "cover1")
+    secret1_ref = ensure_reference_image(SECRET1, SECRET1_SAMPLE, "secret1")
 
-    evaluate_pair(cover_ref, STEGO, "Cover vs Stego")
-    evaluate_pair(secret_ref, RECOVERED, "Secret vs Recovered")
+    evaluate_pair(cover1_ref, STEGO, "Cover1 vs Stego")
+    evaluate_pair(secret1_ref, RECOVERED, "Secret1 vs Recovered")
 
 
 if __name__ == "__main__":

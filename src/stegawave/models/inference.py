@@ -25,12 +25,22 @@ from stegawave.models.model import Model
 
 CHECKPOINT_PATH = PROJECT_ROOT / "checkpoints" / "model.pt"
 
-# Data subfolders merged under data/
-COVER_PATH = DATA_DIR / "samples" / "cover" / "cover.jpeg"
-SECRET_PATH = DATA_DIR / "samples" / "secret" / "secret.jpeg"
 
-TRANSFORMED_COVER_PATH = TRANSFORMED_DIR / "cover" / "cover.jpeg"
-TRANSFORMED_SECRET_PATH = TRANSFORMED_DIR / "secret" / "secret.jpeg"
+def get_image_path(folder: Path, stem: str, default_ext: str = ".jpg") -> Path:
+    """Find an image matching stem with common image extensions."""
+    for ext in (".jpg", ".jpeg", ".png"):
+        candidate = folder / f"{stem}{ext}"
+        if candidate.is_file():
+            return candidate
+    return folder / f"{stem}{default_ext}"
+
+
+# Data subfolders merged under data/
+COVER1_PATH = get_image_path(DATA_DIR / "samples" / "cover", "cover1", ".jpg")
+SECRET1_PATH = get_image_path(DATA_DIR / "samples" / "secret", "secret1", ".jpeg")
+
+TRANSFORMED_COVER1_PATH = TRANSFORMED_DIR / "cover" / COVER1_PATH.name
+TRANSFORMED_SECRET1_PATH = TRANSFORMED_DIR / "secret" / SECRET1_PATH.name
 
 OUTPUT_DIR = DATA_DIR / "outputs"
 
@@ -160,19 +170,19 @@ def main() -> None:
 
     print("Loading and preprocessing input images...")
 
-    cover = load_image(COVER_PATH, save_path=TRANSFORMED_COVER_PATH)
-    secret = load_image(SECRET_PATH, save_path=TRANSFORMED_SECRET_PATH)
+    cover1 = load_image(COVER1_PATH, save_path=TRANSFORMED_COVER1_PATH)
+    secret1 = load_image(SECRET1_PATH, save_path=TRANSFORMED_SECRET1_PATH)
 
-    print("Cover shape:", tuple(cover.shape))
-    print("Secret shape:", tuple(secret.shape))
+    print("Cover1 shape:", tuple(cover1.shape))
+    print("Secret1 shape:", tuple(secret1.shape))
 
     # Both inputs must have identical tensor dimensions.
-    if cover.shape != secret.shape:
+    if cover1.shape != secret1.shape:
         raise ValueError(
-            "Cover and secret must have matching dimensions after "
+            "Cover1 and secret1 must have matching dimensions after "
             "preprocessing. "
-            f"Cover: {tuple(cover.shape)}, "
-            f"secret: {tuple(secret.shape)}"
+            f"Cover1: {tuple(cover1.shape)}, "
+            f"secret1: {tuple(secret1.shape)}"
         )
 
     print("Input dimensions verified.")
@@ -183,7 +193,7 @@ def main() -> None:
     print("Running concealment and recovery...")
 
     with torch.inference_mode():
-        stego, recovered_secret = model(cover, secret)
+        stego, recovered_secret = model(cover1, secret1)
 
     # Save generated images.
     save_image(
