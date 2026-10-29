@@ -13,9 +13,7 @@ transform = transforms.Compose([
 ])
 
 
-def load_and_preprocess_image(
-    image_path: str | Path,
-) -> torch.Tensor:
+def load_and_preprocess_image(image_path: str | Path,) -> torch.Tensor:
     """Load an image and return an RGB tensor of shape (1, 3, 256, 256)."""
 
     with Image.open(image_path) as image:
