@@ -6,11 +6,12 @@ readme = "README.md"
 authors = [
     { name = "Asmit Yadav", email = "asmit12yadav@gmail.com" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "numpy>=2.5.4",
-    "pillow>=13.0.0",
-    "scikit-image>=0.26.0",
+    "gradio>=5.0.0",
+    "numpy>=2.0.0",
+    "pillow>=10.2.0,<13.0.0",
+    "scikit-image>=0.24.0",
     "torch>=2.14.1",
     "torchvision>=0.29.1",
 ]

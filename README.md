@@ -1,3 +1,14 @@
+---
+title: StegaWAVE
+emoji: 🌊
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+app_file: app.py
+pinned: false
+license: mit
+---
+
 # StegaWAVE
 
 **StegaWAVE** is an Invertible Neural Network (HiNet) image steganography project leveraging Discrete Wavelet Transforms (DWT) to conceal full-resolution secret images inside cover images and faithfully recover them with minimal perceptual distortion.
@@ -63,6 +74,7 @@ StegaWAVE/
 | **Model Weights** | `checkpoints/model.pt` | Pretrained HiNet PyTorch checkpoint. |
 | **Input Images** | `data/samples/` | Sample cover and secret images. |
 | **Output Images** | `data/outputs/` | Generated stego and extracted secret images. |
+| **Gradio Web UI** | `app.py` | Interactive demo for Hugging Face Spaces deployment. |
 | **Run Inference** | `scripts/run_inference.py` | Conceals secret in cover and saves stego + recovered secret. |
 | **Evaluate Quality** | `scripts/evaluate.py` | Computes PSNR and SSIM between reference and generated images. |
 | **Check Checkpoint** | `scripts/check_model.py` | Verifies weights loading and tensor dimensions. |
@@ -102,3 +114,10 @@ Run all unit tests using pytest:
 ```bash
 uv run pytest
 ```
+
+### 5. Launch Gradio Web UI
+Launch the interactive web UI locally (or deploy to Hugging Face Spaces):
+```bash
+uv run python app.py
+```
+Open `http://localhost:7860` in your browser.
