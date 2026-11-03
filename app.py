@@ -1,7 +1,8 @@
-"""StegaWAVE: Hugging Face Spaces Gradio Application.
+"""StegaWAVE: Hugging Face Spaces Gradio Application with ZeroGPU Support.
 
 Provides an interactive web interface for invertible neural network
 wavelet-based image steganography (concealment and extraction).
+Compatible with Hugging Face ZeroGPU and local CPU/CUDA environments.
 """
 
 import functools
@@ -14,6 +15,24 @@ import torch
 from PIL import Image
 from torchvision import transforms
 
+# --- ZeroGPU Integration with Local Fallback ---
+try:
+    import spaces  # type: ignore
+except ImportError:
+    # Graceful fallback when running locally or in standard CPU environments
+    class _SpacesMock:
+        @staticmethod
+        def GPU(func=None, duration=None):
+            if func is not None:
+                return func
+
+            def decorator(f):
+                return f
+
+            return decorator
+
+    spaces = _SpacesMock()
+
 # Ensure src is accessible in Python path
 PROJECT_ROOT = Path(__file__).resolve().parent
 SRC_DIR = PROJECT_ROOT / "src"
@@ -24,8 +43,10 @@ from stegawave.metrics.evaluation import calculate_psnr, calculate_ssim
 from stegawave.models.model import Model
 
 TARGET_SIZE = (256, 256)
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = PROJECT_ROOT / "checkpoints" / "model.pt"
+
+# Under ZeroGPU, torch.cuda.is_available() is True during startup via CUDA emulation
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 to_tensor = transforms.ToTensor()
 to_pil = transforms.ToPILImage()
@@ -33,7 +54,7 @@ to_pil = transforms.ToPILImage()
 
 @functools.lru_cache(maxsize=1)
 def get_model() -> Model:
-    """Load and cache the pretrained HiNet steganography model."""
+    """Load and cache the pretrained HiNet steganography model once at startup."""
     if not CHECKPOINT_PATH.is_file():
         raise FileNotFoundError(f"Checkpoint not found at: {CHECKPOINT_PATH}")
 
@@ -45,13 +66,20 @@ def get_model() -> Model:
     return model
 
 
-def preprocess_pil(image: Image.Image) -> tuple[torch.Tensor, np.ndarray]:
-    """Convert input PIL Image to RGB (256x256), a normalized Tensor, and a uint8 array."""
+# Preload and initialize model at module level per ZeroGPU best practice
+MODEL = get_model()
+
+
+def preprocess_pil(image: Image.Image, device: torch.device | None = None) -> tuple[torch.Tensor, np.ndarray]:
+    """Convert input PIL Image to RGB (256x256), a normalized Tensor on active device, and a uint8 array."""
+    if device is None:
+        device = next(MODEL.parameters()).device
+
     image = image.convert("RGB")
     if image.size != TARGET_SIZE:
         image = image.resize(TARGET_SIZE, Image.Resampling.BILINEAR)
     np_arr = np.asarray(image, dtype=np.uint8)
-    tensor = to_tensor(image).unsqueeze(0).to(DEVICE)
+    tensor = to_tensor(image).unsqueeze(0).to(device)
     return tensor, np_arr
 
 
@@ -63,90 +91,101 @@ def tensor_to_outputs(tensor: torch.Tensor) -> tuple[Image.Image, np.ndarray]:
     return pil_img, np_arr
 
 
-def format_metrics(psnr_val: float, ssim_val: float, label: str) -> str:
-    """Format PSNR and SSIM into a readable assessment badge."""
-    badge = "🟢 Excellent" if psnr_val >= 40.0 else "🟡 Good" if psnr_val >= 35.0 else "🟠 Moderate"
-    return f"**{label}**\n- **PSNR**: `{psnr_val:.2f} dB`\n- **SSIM**: `{ssim_val:.4f}`\n- **Rating**: {badge}"
-
-
+@spaces.GPU(duration=30)
 def full_cycle(
     cover_image: Image.Image | None,
     secret_image: Image.Image | None,
 ) -> tuple[Image.Image | None, Image.Image | None, str]:
-    """Conceal secret in cover, extract secret, and compute evaluation metrics."""
+    """Conceal secret in cover, extract secret, and compute evaluation metrics on GPU."""
     if cover_image is None or secret_image is None:
         raise gr.Error("Please provide both a Cover image and a Secret image.")
 
-    model = get_model()
-    cover_tensor, cover_arr = preprocess_pil(cover_image)
-    secret_tensor, secret_arr = preprocess_pil(secret_image)
+    try:
+        device = next(MODEL.parameters()).device
+        cover_tensor, cover_arr = preprocess_pil(cover_image, device=device)
+        secret_tensor, secret_arr = preprocess_pil(secret_image, device=device)
 
-    with torch.inference_mode():
-        stego_tensor, recovered_tensor = model(cover_tensor, secret_tensor)
+        with torch.inference_mode():
+            stego_tensor, recovered_tensor = MODEL(cover_tensor, secret_tensor)
 
-    stego_pil, stego_arr = tensor_to_outputs(stego_tensor)
-    recovered_pil, recovered_arr = tensor_to_outputs(recovered_tensor)
+        stego_pil, stego_arr = tensor_to_outputs(stego_tensor)
+        recovered_pil, recovered_arr = tensor_to_outputs(recovered_tensor)
 
-    cover_psnr = calculate_psnr(cover_arr, stego_arr)
-    cover_ssim = calculate_ssim(cover_arr, stego_arr)
+        cover_psnr = calculate_psnr(cover_arr, stego_arr)
+        cover_ssim = calculate_ssim(cover_arr, stego_arr)
 
-    secret_psnr = calculate_psnr(secret_arr, recovered_arr)
-    secret_ssim = calculate_ssim(secret_arr, recovered_arr)
+        secret_psnr = calculate_psnr(secret_arr, recovered_arr)
+        secret_ssim = calculate_ssim(secret_arr, recovered_arr)
 
-    metrics_md = (
-        "### 📊 Fidelity & Steganography Quality Report\n\n"
-        f"| Comparison | PSNR (dB) | SSIM | Assessment |\n"
-        f"| :--- | :--- | :--- | :--- |\n"
-        f"| **Cover $\\to$ Stego** | `{cover_psnr:.2f}` | `{cover_ssim:.4f}` | {'🟢 Imperceptible distortion' if cover_psnr >= 40 else '🟡 Minor distortion'} |\n"
-        f"| **Secret $\\to$ Recovered** | `{secret_psnr:.2f}` | `{secret_ssim:.4f}` | {'🟢 Near-lossless recovery' if secret_psnr >= 40 else '🟡 Acceptable recovery'} |\n"
-    )
+        metrics_md = (
+            "### 📊 Fidelity & Steganography Quality Report\n\n"
+            f"| Comparison | PSNR (dB) | SSIM | Assessment |\n"
+            f"| :--- | :--- | :--- | :--- |\n"
+            f"| **Cover $\\to$ Stego** | `{cover_psnr:.2f}` | `{cover_ssim:.4f}` | "
+            f"{'🟢 Imperceptible distortion' if cover_psnr >= 40 else '🟡 Minor distortion'} |\n"
+            f"| **Secret $\\to$ Recovered** | `{secret_psnr:.2f}` | `{secret_ssim:.4f}` | "
+            f"{'🟢 Near-lossless recovery' if secret_psnr >= 40 else '🟡 Acceptable recovery'} |\n"
+        )
 
-    return stego_pil, recovered_pil, metrics_md
+        return stego_pil, recovered_pil, metrics_md
+
+    except Exception as exc:
+        raise gr.Error(f"Inference error during full cycle execution: {exc}") from exc
 
 
+@spaces.GPU(duration=20)
 def conceal_only(
     cover_image: Image.Image | None,
     secret_image: Image.Image | None,
 ) -> tuple[Image.Image | None, str]:
-    """Conceal secret inside cover image to generate stego image."""
+    """Conceal secret inside cover image to generate stego image on GPU."""
     if cover_image is None or secret_image is None:
         raise gr.Error("Please provide both a Cover image and a Secret image.")
 
-    model = get_model()
-    cover_tensor, cover_arr = preprocess_pil(cover_image)
-    secret_tensor, _ = preprocess_pil(secret_image)
+    try:
+        device = next(MODEL.parameters()).device
+        cover_tensor, cover_arr = preprocess_pil(cover_image, device=device)
+        secret_tensor, _ = preprocess_pil(secret_image, device=device)
 
-    with torch.inference_mode():
-        stego_tensor, _ = model.conceal(cover_tensor, secret_tensor)
+        with torch.inference_mode():
+            stego_tensor, _ = MODEL.conceal(cover_tensor, secret_tensor)
 
-    stego_pil, stego_arr = tensor_to_outputs(stego_tensor)
-    psnr_val = calculate_psnr(cover_arr, stego_arr)
-    ssim_val = calculate_ssim(cover_arr, stego_arr)
+        stego_pil, stego_arr = tensor_to_outputs(stego_tensor)
+        psnr_val = calculate_psnr(cover_arr, stego_arr)
+        ssim_val = calculate_ssim(cover_arr, stego_arr)
 
-    metrics_md = (
-        "### 🛡️ Stego Quality (Imperceptibility)\n\n"
-        f"- **PSNR**: `{psnr_val:.2f} dB`\n"
-        f"- **SSIM**: `{ssim_val:.4f}`\n\n"
-        "*(Higher PSNR indicates the stego image looks virtually identical to the original cover)*"
-    )
-    return stego_pil, metrics_md
+        metrics_md = (
+            "### 🛡️ Stego Quality (Imperceptibility)\n\n"
+            f"- **PSNR**: `{psnr_val:.2f} dB`\n"
+            f"- **SSIM**: `{ssim_val:.4f}`\n\n"
+            "*(Higher PSNR indicates the stego image looks virtually identical to the original cover)*"
+        )
+        return stego_pil, metrics_md
+
+    except Exception as exc:
+        raise gr.Error(f"Inference error during concealment: {exc}") from exc
 
 
+@spaces.GPU(duration=20)
 def reveal_only(
     stego_image: Image.Image | None,
 ) -> Image.Image | None:
-    """Extract hidden secret image from a stego image."""
+    """Extract hidden secret image from a stego image on GPU."""
     if stego_image is None:
         raise gr.Error("Please provide a Stego image.")
 
-    model = get_model()
-    stego_tensor, _ = preprocess_pil(stego_image)
+    try:
+        device = next(MODEL.parameters()).device
+        stego_tensor, _ = preprocess_pil(stego_image, device=device)
 
-    with torch.inference_mode():
-        recovered_tensor = model.reveal(stego_tensor)
+        with torch.inference_mode():
+            recovered_tensor = MODEL.reveal(stego_tensor)
 
-    recovered_pil, _ = tensor_to_outputs(recovered_tensor)
-    return recovered_pil
+        recovered_pil, _ = tensor_to_outputs(recovered_tensor)
+        return recovered_pil
+
+    except Exception as exc:
+        raise gr.Error(f"Inference error during secret extraction: {exc}") from exc
 
 
 # Prepare example pairs
