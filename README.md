@@ -27,7 +27,7 @@ StegaWAVE/
 ├── src/
 │   └── stegawave/            # Main Python package
 │       ├── __init__.py       # Package exports (Model, Hinet, DWT, IWT, etc.)
-│       ├── cli.py            # Command-line interface router (`stegawave` CLI)
+│       ├── pipeline.py       # High-level pipeline functions for inference & checks
 │       ├── data/             # Image dataset loading & preprocessing utilities
 │       │   ├── __init__.py
 │       │   └── preprocessing.py
@@ -101,12 +101,4 @@ uv run python scripts/check_model.py
 Run all unit tests using pytest:
 ```bash
 uv run pytest
-```
-
-### 5. CLI Interface
-You can also use the unified CLI tool:
-```bash
-uv run stegawave infer
-uv run stegawave evaluate
-uv run stegawave check
 ```
