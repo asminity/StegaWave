@@ -1,3 +1,6 @@
-numpy>=2.0.0
-pillow>=10.2.0,<13.0.0
-scikit-image>=0.24.0
+torchvision
+numpy
+pillow
+scikit-image
+torch 
+gradio
