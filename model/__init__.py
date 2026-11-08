@@ -7,8 +7,8 @@ Subpackages:
     architecture  wavelets, subnet, coupling blocks, HiNet, hide/reveal model
     data          image folders, transforms, loaders, cover/secret split
     training      losses, experiment config, checkpoints, trainer
-    evaluation    metrics
-    cli           `python -m model.cli.train`
+    evaluation    metrics, channel settings, evaluator, reports
+    cli           `python -m model.cli.train` / `python -m model.cli.evaluate`
 """
 
 from model.architecture import (
@@ -35,7 +35,13 @@ from model.data import (
     train_transform,
     val_transform,
 )
-from model.evaluation import official_psnr, uint8_metrics
+from model.evaluation import (
+    EvalConfig,
+    EvalResult,
+    evaluate,
+    official_psnr,
+    uint8_metrics,
+)
 from model.training import (
     ExperimentConfig,
     HiNetLoss,
@@ -57,6 +63,8 @@ __all__ = [
     "ArchitectureConfig",
     "DataConfig",
     "DenseSubnet",
+    "EvalConfig",
+    "EvalResult",
     "ExperimentConfig",
     "HaarDWT",
     "HaarIWT",
@@ -72,6 +80,7 @@ __all__ = [
     "Trainer",
     "build_train_loader",
     "build_val_loader",
+    "evaluate",
     "guide_loss",
     "haar_dwt",
     "haar_iwt",
