@@ -19,6 +19,15 @@ from model.architecture import (
     init_hinet_,
     low_frequency,
 )
+from model.training import (
+    HiNetLoss,
+    LossConfig,
+    LossOutput,
+    guide_loss,
+    hinet_losses,
+    low_frequency_loss,
+    reconstruction_loss,
+)
 
 __all__ = [
     "AffineCoupling",
@@ -34,4 +43,11 @@ __all__ = [
     "haar_iwt",
     "init_hinet_",
     "low_frequency",
+    "HiNetLoss",
+    "LossConfig",
+    "LossOutput",
+    "guide_loss",
+    "hinet_losses",
+    "low_frequency_loss",
+    "reconstruction_loss",
 ]
