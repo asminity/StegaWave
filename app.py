@@ -121,9 +121,9 @@ def full_cycle(
             "### 📊 Fidelity & Steganography Quality Report\n\n"
             f"| Comparison | PSNR (dB) | SSIM | Assessment |\n"
             f"| :--- | :--- | :--- | :--- |\n"
-            f"| **Cover $\\to$ Stego** | `{cover_psnr:.2f}` | `{cover_ssim:.4f}` | "
+            f"| **Cover → Stego** | `{cover_psnr:.2f}` | `{cover_ssim:.4f}` | "
             f"{'🟢 Imperceptible distortion' if cover_psnr >= 40 else '🟡 Minor distortion'} |\n"
-            f"| **Secret $\\to$ Recovered** | `{secret_psnr:.2f}` | `{secret_ssim:.4f}` | "
+            f"| **Secret → Recovered** | `{secret_psnr:.2f}` | `{secret_ssim:.4f}` | "
             f"{'🟢 Near-lossless recovery' if secret_psnr >= 40 else '🟡 Acceptable recovery'} |\n"
         )
 
@@ -219,12 +219,28 @@ with gr.Blocks(title="StegaWAVE | Invertible Wavelet Steganography") as demo:
             gr.Markdown("Upload both images (or select an example below) to conceal the secret and automatically test recovery.")
             with gr.Row():
                 with gr.Column():
-                    in_cover = gr.Image(type="pil", label="Cover Image (Host)")
-                    in_secret = gr.Image(type="pil", label="Secret Image (Hidden Payload)")
+                    in_cover = gr.Image(
+                        type="pil",
+                        label="Cover Image (Host)",
+                        buttons=["download", "fullscreen"],
+                    )
+                    in_secret = gr.Image(
+                        type="pil",
+                        label="Secret Image (Hidden Payload)",
+                        buttons=["download", "fullscreen"],
+                    )
                     btn_cycle = gr.Button("🚀 Conceal & Recover Secret", variant="primary")
                 with gr.Column():
-                    out_stego = gr.Image(type="pil", label="Generated Stego Image (Looks like Cover)")
-                    out_recovered = gr.Image(type="pil", label="Extracted Secret Image")
+                    out_stego = gr.Image(
+                        type="pil",
+                        label="Generated Stego Image (Looks like Cover)",
+                        buttons=["download", "fullscreen"],
+                    )
+                    out_recovered = gr.Image(
+                        type="pil",
+                        label="Extracted Secret Image",
+                        buttons=["download", "fullscreen"],
+                    )
                     out_metrics = gr.Markdown("Run the model to see PSNR & SSIM metrics.")
 
             btn_cycle.click(
@@ -248,11 +264,23 @@ with gr.Blocks(title="StegaWAVE | Invertible Wavelet Steganography") as demo:
             gr.Markdown("Conceal a secret image inside a cover image to create an innocent-looking stego image for download.")
             with gr.Row():
                 with gr.Column():
-                    c_cover = gr.Image(type="pil", label="Cover Image")
-                    c_secret = gr.Image(type="pil", label="Secret Image")
+                    c_cover = gr.Image(
+                        type="pil",
+                        label="Cover Image",
+                        buttons=["download", "fullscreen"],
+                    )
+                    c_secret = gr.Image(
+                        type="pil",
+                        label="Secret Image",
+                        buttons=["download", "fullscreen"],
+                    )
                     btn_conceal = gr.Button("🔒 Generate Stego Image", variant="primary")
                 with gr.Column():
-                    c_out_stego = gr.Image(type="pil", label="Stego Image")
+                    c_out_stego = gr.Image(
+                        type="pil",
+                        label="Stego Image",
+                        buttons=["download", "fullscreen"],
+                    )
                     c_out_metrics = gr.Markdown()
 
             btn_conceal.click(
@@ -266,10 +294,18 @@ with gr.Blocks(title="StegaWAVE | Invertible Wavelet Steganography") as demo:
             gr.Markdown("Extract a hidden secret image from a stego image created by StegaWAVE.")
             with gr.Row():
                 with gr.Column():
-                    r_stego = gr.Image(type="pil", label="Stego Image")
+                    r_stego = gr.Image(
+                        type="pil",
+                        label="Stego Image",
+                        buttons=["download", "fullscreen"],
+                    )
                     btn_reveal = gr.Button("🔓 Extract Hidden Secret", variant="primary")
                 with gr.Column():
-                    r_out_secret = gr.Image(type="pil", label="Extracted Secret Image")
+                    r_out_secret = gr.Image(
+                        type="pil",
+                        label="Extracted Secret Image",
+                        buttons=["download", "fullscreen"],
+                    )
 
             btn_reveal.click(
                 fn=reveal_only,
